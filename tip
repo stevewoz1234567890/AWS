@@ -1,0 +1,22 @@
+has anyone built (or knows how to build) a system where customers can add a CNAME to their DNS and point it to you a page served by your web app? e.g. Netlify letting you add a custom domain, registering the SSL cert for you, etc. turns out this is 100% impossible to build on AWS using API Gateway & Certificate Manage
+
+I’m surprised to hear aws couldn’t do this; should be pretty easy with traefik using dynamic config—just add the new custom domain to the list of routes for that backend and it’ll auto gen the cert via LE
+since dynamic config can be handled as docker labels, you’d need to trigger an update to labels when the custom domain has been accepted (maybe want to build in a dns check before accepting or something)
+
+ell, AWS can do it, kinda. support said no problem, just create custom domains in API Gateway and use AWS Cert Manager. then I replied & basically said "well, no.. imagine this at scale, 50,000 customers" :smile: then they said it wasn't possible. API Gateway expects the requesting hostname to match one of the custom domains on the list.
+
+so it seems I have to rig some solution where there's a proxy server + Let's Encrypt that modifies the Host header and routes the call to API Gateway.. then passes the result back to the requestor.
+
+my only other idea right this minute is to see if I can set up a CloudFront distribution, somehow set its origin to API Gateway (https://aws.amazon.com/premiumsupport/knowledge-center/api-gateway-cloudfront-distribution/) assign it a domain name (e.g. pages.myapp.net), then customers point a CNAME to that hostname.. and I use Lambda@Edge to rewrite the Host header. not sure.
+
+I have a solution architect contact at AWS I'm gonna email today & see if he has any ideas. ideally I'd love to remain serverless with this thing
+
+ah, big nope my above idea too.. since CloudFront would use AWS Cert Manager.. and that maxes out at 2500 SSL certs
+
+and that maxes out at 2500 SSL certs
+Sounds good to me. Don't think "this won't work". Instead, you should be thinking "I can get started with this."  Once you get thousands of customers, you'll have the money to move to something more scalable.
+All AWS limits are per-account, so you can always spin up multiple accounts.
+
+it looks like boto3 supports creating domain names in api gateway programatically, so until you hit that 2.5k limit for certs it shouldn't be that bad.
+
+yeah. I know I can technically build it on AWS now, but I'd rather build it just once, ready to scale, and call it done.
